@@ -93,7 +93,7 @@ if __name__ == '__main__':
 
     #write the df to GCS Bucket
 
-    json_data = df.toJSON().collect()  # json_data is a list of JSON strings
+    json_data = df.toJSON().collect()  #json_data is a list of JSON strings
 
     # upload_to_gcs1=utils_obj.upload_to_gcs(area_df,'earthquake_analysiss','silver/historical_data')
     # print('Sucessfully Written')
