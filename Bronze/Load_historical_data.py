@@ -105,12 +105,12 @@ if __name__ == '__main__':
     # print('Sucessfully Written')
 
     # ================================================================================
-
-    data_to_upload = [json.loads(record) for record in json_data]
-
-    write_data=utils_obj.upload_to_gcs(data_to_upload,'earthquake_analysiss','silver/20241022/Historical_data.json')
-
-    print(f'File written successfully ')
+    #
+    # data_to_upload = [json.dumps(record) for record in json_data]
+    #
+    # write_data=utils_obj.upload_to_gcs(json_data,'earthquake_analysiss','silver/20241022/Historical_data.json')
+    #
+    # print(f'File written successfully ')
 
     #print(type(json_data))
 
@@ -124,7 +124,6 @@ if __name__ == '__main__':
         .mode('overwrite') \
         .save()
 
-    logging.info('job sumitted')
     #  file_path_gcs='gs://earthquake_analysiss/silver/20241022/Historical_data'
 
 
