@@ -7,24 +7,28 @@
 # Modification Description :
 #################################################################################
 
-from apache_beam.options.pipeline_options import PipelineOptions, GoogleCloudOptions, StandardOptions
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import from_unixtime, udf
+from pyspark.sql.functions import from_unixtime, udf,split,lit,current_timestamp
 from pyspark.sql.functions import col, explode
 import json
 import logging
 from pyspark import SparkContext
 from pyspark.sql.types import StructType, StructField, IntegerType, StringType, DoubleType, ArrayType, LongType, \
-    MapType, FloatType
+     MapType, FloatType
 from utility import Utils
-from google.cloud import storage
-import apache_beam as beam
+from google.cloud import storage,bigquery
 import os
+import logging
+
+logging.basicConfig(filemode='Historical_data',level=logging.INFO)
 
 if __name__ == '__main__':
 
     os.environ[
         'GOOGLE_APPLICATION_CREDENTIALS'] = r'C:\Users\Lenovo\Project_First\.venv\project-earthquake-439311-29bcc5e29e30.json'
+
+    client_big=bigquery.Client()
+    table_id = 'project-earthquake-439311.earthquake_db.earthquake_data'
 
     # ================================================================================
 
@@ -47,10 +51,9 @@ if __name__ == '__main__':
     # upload file into GCS
     upload_file = utils_obj.upload_to_gcs(response, 'earthquake_analysiss', 'pyspark/landing/20241022/Historical_data')
 
-    # read data from the GCS Bucket
-
     # ================================================================================
 
+    # read data from the GCS Bucket
     read_data = utils_obj.read_file_from_gcs('earthquake_analysiss', 'pyspark/landing/20241022/Historical_data.json')
     # print(read_data)
 
@@ -60,10 +63,10 @@ if __name__ == '__main__':
     flattened_data = utils_obj.flatten_earthquake_data(read_data)
 
     schema = utils_obj.schema()
-    #
+
     # # Create DataFrame
     df = spark.createDataFrame(flattened_data, schema=schema)
-    df.show()
+    #df.show()
 
     # ================================================================================
 
@@ -71,36 +74,70 @@ if __name__ == '__main__':
 
     updated_df = df.withColumn('time', from_unixtime(df['time'] / 1000)).withColumn('updated', from_unixtime(df['updated'] / 1000))
 
-    updated_df.show()
+    #updated_df.show()
 
-    updated_df.printSchema()
+    #updated_df.printSchema()
 
     # ================================================================================
 
-    # Generate column “area” - based on existing “place” column
-    #
-    def city(place):
-        if place:
-            words = place.split()
-            return words[-1]  # Return the last word
-            return None
+    # Generate column “area” - based on existing “place” column #
 
-    ek_function = udf(city, StringType())
 
-    area_df = updated_df.withColumn('area', ek_function(col('place')))
+    area_df=updated_df.withColumn("area", split(col("place"), " of").getItem(1))
 
-    area_df.show(truncate=False)
+    #area_df.show(truncate=False)
+
+    # ================================================================================
+
+    #Insert data : insert_dt (Timestamp)
+
+    insert_df=area_df.withColumn('insert_dt',lit(current_timestamp()))
+
+    insert_df.show()
+
+    # ================================================================================
 
     #write the df to GCS Bucket
 
-    json_data = df.toJSON().collect()  #json_data is a list of JSON strings
+    json_data = insert_df.toJSON().collect()  #json_data is a list of JSON strings
 
     # upload_to_gcs1=utils_obj.upload_to_gcs(area_df,'earthquake_analysiss','silver/historical_data')
     # print('Sucessfully Written')
 
+    # ================================================================================
+
     data_to_upload = [json.loads(record) for record in json_data]
 
-    write_data=utils_obj.upload_to_gcs(data_to_upload,'earthquake_analysiss','silver/20241022/Historical_data')
+    write_data=utils_obj.upload_to_gcs(data_to_upload,'earthquake_analysiss','silver/20241022/Historical_data.json')
 
-    print(f'File written successfully {write_data}')
+    print(f'File written successfully ')
+
+    #print(type(json_data))
+
+    # ================================================================================
+
+    # upload to bigquery
+
+    insert_df.write \
+        .format('bigquery') \
+        .option('table', 'project-earthquake-439311.earthquake_db.earthquake_data') \
+        .mode('overwrite') \
+        .save()
+
+    logging.info('job sumitted')
+    #  file_path_gcs='gs://earthquake_analysiss/silver/20241022/Historical_data'
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

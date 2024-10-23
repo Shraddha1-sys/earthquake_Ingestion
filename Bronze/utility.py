@@ -1,7 +1,6 @@
 import requests
 import json
 from google.cloud import storage
-import apache_beam as beam
 from pyspark.sql.types import StructType, StructField, IntegerType, StringType, DoubleType, ArrayType, LongType, MapType,FloatType
 from datetime import datetime
 
@@ -42,7 +41,49 @@ class Utils:
 
         return flattened_schema
 
+
+    def schema_for_bigq(self):
+        flattened_schema1 = StructType([
+        StructField("mag", DoubleType(), True),
+        StructField("place", StringType(), True),
+        StructField("time", StringType(), True),
+        StructField("updated", StringType(), True),
+        StructField("tz", IntegerType(), True),
+        StructField("url", StringType(), True),
+        StructField("detail", StringType(), True),
+        StructField("felt", IntegerType(), True),
+        StructField("cdi", FloatType(), True),
+        StructField("mmi", FloatType(), True),
+        StructField("alert", StringType(), True),
+        StructField("status", StringType(), True),
+        StructField("tsunami", IntegerType(), True),
+        StructField("sig", IntegerType(), True),
+        StructField("net", StringType(), True),
+        StructField("code", StringType(), True),
+        StructField("ids", StringType(), True),
+        StructField("sources", StringType(), True),
+        StructField("types", StringType(), True),
+        StructField("nst", IntegerType(), True),
+        StructField("dmin", FloatType(), True),
+        StructField("rms", FloatType(), True),
+        StructField("gap", FloatType(), True),
+        StructField("magType", StringType(), True),
+        StructField("type", StringType(), True),
+        StructField("title", StringType(), True),
+        StructField("longitude", FloatType(), True),
+        StructField("latitude", FloatType(), True),
+        StructField("depth", FloatType(), True)
+    ])
+
+        return flattened_schema1
+
+
     def fetch_data_from_api(self, url):
+        """
+
+        :param url: URL which mentioned hostorical
+        :return: return the data into the json format
+        """
         try:
             response = requests.get(url)
             return response.json()
@@ -50,6 +91,11 @@ class Utils:
             print(f"An error occurred: {e}")
 
     def flatten_earthquake_data(self,even_data):
+        """
+
+        :param even_data: data which needs to be flattened
+        :return: return flatted data into list of dict
+        """
 
         flattened_data=[]
 
@@ -97,6 +143,14 @@ class Utils:
         return flattened_data
     def upload_to_gcs(self, data, bucket_name, blob_name):
 
+        """
+
+        :param data:
+        :param bucket_name:
+        :param blob_name:
+        :return:
+        """
+
         client = storage.Client()
 
         # Get the bucket and blob objects
@@ -127,7 +181,7 @@ class Utils:
         return data
 
 
-class FetchDataFromAPI(beam.DoFn):
-    def process(self, url):
-        response = requests.get(url)
-        return response.json()
+# class FetchDataFromAPI(beam.DoFn):
+#     def process(self, url):
+#         response = requests.get(url)
+#         return response.json()
