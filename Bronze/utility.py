@@ -1,6 +1,6 @@
 import requests
 import json
-from google.cloud import storage
+from google.cloud import storage,bigquery
 from pyspark.sql.types import StructType, StructField, IntegerType, StringType, DoubleType, ArrayType, LongType, MapType,FloatType
 from datetime import datetime
 
@@ -179,6 +179,37 @@ class Utils:
         data = json.loads(json_data)  # Parse JSON into a Python dictionary
 
         return data
+
+    def create_bucket(self,project_name,bucket_name,location):
+        client=storage.Client()
+
+        bucket=client.bucket(bucket_name)
+
+        bucket.storage_class='STANDARD'
+
+        bucket_new=client.create_bucket(project_name,bucket_name,location)
+
+        return print(f'{bucket_new} bucket created successfully')
+
+    def create_dataset(self,project_name,dataset_name,location,check_dataset=True):
+
+        client = bigquery.Client(project=project_name)
+
+        try:
+            dataset=client.create_dataset(dataset_name)
+
+            dataset.location = location
+
+            print(f'{dataset} Dataset is created')
+
+        except Exception as msg:
+            print(f'{msg} error occcured')
+            
+        return print(f'Dataset created successfully')
+
+    def create_table(self):
+
+        return print(f'Table created Successfully..!!')
 
 
 # class FetchDataFromAPI(beam.DoFn):

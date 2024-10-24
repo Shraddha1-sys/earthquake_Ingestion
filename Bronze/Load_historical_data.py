@@ -19,21 +19,25 @@ from utility import Utils
 from google.cloud import storage,bigquery
 import os
 import logging
+from datetime import  *
+import time
 
-logging.basicConfig(filemode='Historical_data',level=logging.INFO)
+# logging.basicConfig(filename='Historical_data.log', level=logging.INFO,
+#                     format='%(asctime)s - %(levelname)s - %(message)s')
 
 if __name__ == '__main__':
 
     os.environ[
-        'GOOGLE_APPLICATION_CREDENTIALS'] = r'C:\Users\Lenovo\Project_First\.venv\project-earthquake-439311-29bcc5e29e30.json'
-
-    client_big=bigquery.Client()
-    table_id = 'project-earthquake-439311.earthquake_db.earthquake_data'
+        'GOOGLE_APPLICATION_CREDENTIALS'] = r'C:\Users\Lenovo\earthquake_Ingestion\project-earthquake-439311-ce63dc0e4446.json'
 
     # ================================================================================
 
+    current_date = datetime.now().strftime("%Y%m%d")  # Format the date asYYYY MMDD
+
     # initialize the spark session
-    spark = SparkSession.builder.master("local[*]").appName("project").getOrCreate()
+    spark = SparkSession.builder \
+          .appName("project") \
+          .getOrCreate()
 
     # ================================================================================
 
@@ -44,17 +48,17 @@ if __name__ == '__main__':
 
     response = utils_obj.fetch_data_from_api(url)
 
-    print(type(response))
+    #print(type(response))
 
     # ================================================================================
 
     # upload file into GCS
-    upload_file = utils_obj.upload_to_gcs(response, 'earthquake_analysiss', 'pyspark/landing/20241022/Historical_data')
+    upload_file = utils_obj.upload_to_gcs(response, 'earthquake_analysiss', f'pyspark/landing/{current_date}/Historical_data')
 
     # ================================================================================
 
     # read data from the GCS Bucket
-    read_data = utils_obj.read_file_from_gcs('earthquake_analysiss', 'pyspark/landing/20241022/Historical_data.json')
+    read_data = utils_obj.read_file_from_gcs('earthquake_analysiss', f'pyspark/landing/{current_date}/Historical_data.json')
     # print(read_data)
 
     # ================================================================================
@@ -93,7 +97,7 @@ if __name__ == '__main__':
 
     insert_df=area_df.withColumn('insert_dt',lit(current_timestamp()))
 
-    insert_df.show()
+    #insert_df.show()
 
     # ================================================================================
 
@@ -101,30 +105,34 @@ if __name__ == '__main__':
 
     json_data = insert_df.toJSON().collect()  #json_data is a list of JSON strings
 
-    # upload_to_gcs1=utils_obj.upload_to_gcs(area_df,'earthquake_analysiss','silver/historical_data')
-    # print('Sucessfully Written')
-
     # ================================================================================
-    #
-    # data_to_upload = [json.dumps(record) for record in json_data]
-    #
-    # write_data=utils_obj.upload_to_gcs(json_data,'earthquake_analysiss','silver/20241022/Historical_data.json')
-    #
-    # print(f'File written successfully ')
 
-    #print(type(json_data))
+    data_to_upload = [json.dumps(record) for record in json_data]
+
+    write_data=utils_obj.upload_to_gcs(json_data,'earthquake_analysiss',f'silver/{current_date}/Historical_data.json')
+
+    print(f'File written successfully ')
+
+    print(type(json_data))
 
     # ================================================================================
 
     # upload to bigquery
 
-    insert_df.write \
-        .format('bigquery') \
-        .option('table', 'project-earthquake-439311.earthquake_db.earthquake_data') \
-        .mode('overwrite') \
-        .save()
+    # try:
+    #     insert_df.write \
+    #     .format('bigquery') \
+    #     .option('table', 'project-earthquake-439311.earthquake_db.earthquake_data') \
+    #     .mode('overwrite') \
+    #     .save()
+    #
+    #     print('table is created')
+    #
+    # except Exception as msg :
+    #     print("We are facing issue to create the table at dataset")
+    #     print(f'Issue is {msg}')
 
-    #  file_path_gcs='gs://earthquake_analysiss/silver/20241022/Historical_data'
+
 
 
 
